@@ -8,6 +8,9 @@ Test data for each day to verify code works is in `data/dayNt` and `data/dayNa` 
 
 Code is a bit messy and not as efficient as it could be.
 
+## Writeups
+- [Day 9](writeups/day9.md)
+
 ## Friends
 ![](friend.gif)
 

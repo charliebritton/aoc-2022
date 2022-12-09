@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+const ROPE_LENGTH = 10
+
 func main() {
 
 	f, err := os.OpenFile("../data/day9a", os.O_RDONLY, 0755)
@@ -19,8 +21,7 @@ func main() {
 	fileScanner.Split(bufio.ScanLines)
 
 	game := &Game{
-		head:        Position{0, 0},
-		tail:        Position{0, 0},
+		knots:       make([]Position, ROPE_LENGTH),
 		tailVisited: make(map[Position]struct{}),
 		boardSize:   Size{6, 5},
 	}
@@ -55,7 +56,7 @@ func main() {
 			}
 
 			// printBoard(game)
-			fmt.Println()
+			// fmt.Println()
 
 		}
 
@@ -105,7 +106,7 @@ func Abs(x int) int {
 
 // tailNeedsToMove takes a Position of the head and the position of the tail
 // TODO possible bug if coordinate space changes to include negative
-func tailNeedsToMove(g *Game) bool {
+func tailNeedsToMove(head Position, tail Position) bool {
 
 	// Head x = 2 Tail x = 0 needs to move
 	// Head x = 2 Tail x = 1 no need to move
@@ -113,8 +114,8 @@ func tailNeedsToMove(g *Game) bool {
 	// 	return false
 	// }
 
-	diffX := Abs(g.head.x - g.tail.x)
-	diffY := Abs(g.head.y - g.tail.y)
+	diffX := Abs(head.x - tail.x)
+	diffY := Abs(head.y - tail.y)
 
 	if diffX > 1 || diffY > 1 {
 		return true
@@ -127,108 +128,80 @@ func tailNeedsToMove(g *Game) bool {
 type Size Position
 
 type Game struct {
-	head, tail  Position
-	tailVisited map[Position]struct{} // always inc 00
+	knots       []Position
+	tailVisited map[Position]struct{}
 	boardSize   Size
 	boardCorner Position // For where the origin is negative
 }
+
+// func (g Game) head() Position {
+// 	return g.knots[0]
+// }
+
+// func (g Game) tail() Position {
+// 	return g.knots[len(g.knots)-1]
+// }
 
 // Takes a direction to move
 func step(d Direction, g *Game) {
 
 	switch d {
 	case Up:
-		g.head.y += 1
+		g.knots[0].y += 1
 	case Down:
-		g.head.y -= 1
+		g.knots[0].y -= 1
 	case Left:
-		g.head.x -= 1
+		g.knots[0].x -= 1
 	case Right:
-		g.head.x += 1
+		g.knots[0].x += 1
 	default:
 		panic("invalid direction")
 	}
 
-	if tailNeedsToMove(g) {
+	// Changes need to propogate through
+	// For each knot acting as its own head, check tail needs to move for that specific, then if at end just return
+	// So do H1, 12, 23, 34, 45, 56, 67, 78, 89
 
-		// Case they are on the same row
-		if g.head.y == g.tail.y {
+	for h := range g.knots[:len(g.knots)-1] {
 
-			// Head is to right
-			if g.head.x > g.tail.x {
-				g.tail.x++
-			} else {
-				g.tail.x--
-			}
+		t := h + 1
 
-			// Case they are on the same column
-		} else if g.head.x == g.tail.x {
+		// fmt.Printf("[%d,%d] ", h, t)
 
-			// Head is above
-			if g.head.y > g.tail.y {
-				g.tail.y++
-			} else {
-				g.tail.y--
-			}
+		if tailNeedsToMove(g.knots[h], g.knots[t]) {
 
-			// Head x,y bigger
-		} else if g.head.x > g.tail.x && g.head.y > g.tail.y {
-
-			g.tail.x++
-			g.tail.y++
-
-			// Head x bigger but y smaller
-		} else if g.head.x > g.tail.x && g.head.y < g.tail.y {
-
-			g.tail.x++
-			g.tail.y--
-
-			// Head x,y smaller
-		} else if g.head.x < g.tail.x && g.head.y < g.tail.y {
-
-			g.tail.x--
-			g.tail.y--
-
-			// Head x smaller but y bigger
-		} else if g.head.x < g.tail.x && g.head.y > g.tail.y {
-
-			g.tail.x--
-			g.tail.y++
-
-		} else {
-
-			panic("clearly missed a trick here chaz")
+			moveTail(&g.knots[h], &g.knots[t])
 
 		}
 
 	}
 
-	g.tailVisited[g.tail] = struct{}{}
+	g.tailVisited[g.knots[len(g.knots)-1]] = struct{}{}
 
 	// OOB top
-	if g.head.y >= g.boardCorner.y+g.boardSize.y {
+	if g.knots[0].y >= g.boardCorner.y+g.boardSize.y {
 		g.boardSize.y += 1
 	}
 
 	// OOB right
-	if g.head.x >= g.boardCorner.x+g.boardSize.x {
+	if g.knots[0].x >= g.boardCorner.x+g.boardSize.x {
 		g.boardSize.x += 1
 	}
 
 	// OOB bottom
-	if g.head.y < g.boardCorner.y {
+	if g.knots[0].y < g.boardCorner.y {
 		g.boardSize.y++
 		g.boardCorner.y--
 	}
 
 	// OOB left
-	if g.head.x < g.boardCorner.x {
+	if g.knots[0].x < g.boardCorner.x {
 		g.boardSize.x++
 		g.boardCorner.x--
 	}
 
 	// Update locations tail has visited and board size if necessary
-	fmt.Printf("Moved head %v\nHead at: %v\nTail at: %v\nBoard Size: %v\nBoard Corner: %v\n\n", d, g.head, g.tail, g.boardSize, g.boardCorner)
+	// fmt.Printf("Moved head %v\nKnot positions: %v\nBoard Size: %v\nBoard Corner: %v\n\n", d, g.knots, g.boardSize, g.boardCorner)
 
 }
 
@@ -240,19 +213,64 @@ func printBoard(g *Game) {
 	for y := g.boardCorner.y; y < g.boardSize.y; y++ {
 
 		line := ""
+		bracketed := ""
 		for x := g.boardCorner.x; x < g.boardSize.x; x++ {
 
-			// If head at position
-			if g.head.x == x && g.head.y == y {
-				line += "H"
-			} else if g.tail.x == x && g.tail.y == y {
-				line += "T"
-			} else if x == 0 && y == 0 {
+			// This is set to false when encountered
+			top := true
+			singular := true
+			bracketedThis := ""
+			isKnot := false
+
+			// For each in the knots try and write there
+			// If writing as 0, then use H
+
+			for i, knot := range g.knots {
+
+				// In this position
+				if knot.x == x && knot.y == y {
+
+					if top && i == 0 {
+						line += "H"
+						bracketedThis += "H covers "
+						top = false
+					} else if top {
+						line += strconv.Itoa(i)
+						bracketedThis += strconv.Itoa(i) + " covers "
+						top = false
+					} else {
+						singular = false
+						bracketedThis += strconv.Itoa(i) + ", "
+					}
+
+					isKnot = true
+
+				}
+
+			}
+
+			// For s specifically
+			if top && x == 0 && y == 0 {
 				line += "s"
-			} else {
+				bracketedThis += "s covers "
+				top = false
+			} else if x == 0 && y == 0 {
+				singular = false
+				bracketedThis += "s, "
+			} else if !isKnot {
 				line += "."
 			}
 
+			if singular {
+				bracketedThis = ""
+			}
+
+			bracketed += bracketedThis
+
+		}
+
+		if bracketed != "" {
+			line += "  (" + bracketed[:len(bracketed)-2] + ")"
 		}
 
 		lineBuf = append(lineBuf, line)
@@ -315,4 +333,55 @@ func printTailVisited(g *Game) {
 	}
 
 	fmt.Printf("TOTAL TAIL VISITS: %d\n", totalVisits)
+}
+
+func moveTail(h *Position, t *Position) {
+	if h.y == t.y {
+
+		// Head is to right
+		if h.x > t.x {
+			t.x++
+		} else {
+			t.x--
+		}
+
+		// Case they are on the same column
+	} else if h.x == t.x {
+
+		// Head is above
+		if h.y > t.y {
+			t.y++
+		} else {
+			t.y--
+		}
+
+		// Head x,y bigger
+	} else if h.x > t.x && h.y > t.y {
+
+		t.x++
+		t.y++
+
+		// Head x bigger but y smaller
+	} else if h.x > t.x && h.y < t.y {
+
+		t.x++
+		t.y--
+
+		// Head x,y smaller
+	} else if h.x < t.x && h.y < t.y {
+
+		t.x--
+		t.y--
+
+		// Head x smaller but y bigger
+	} else if h.x < t.x && h.y > t.y {
+
+		t.x--
+		t.y++
+
+	} else {
+
+		panic("clearly missed a trick here chaz")
+
+	}
 }
