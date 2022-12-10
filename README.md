@@ -10,6 +10,7 @@ Code is a bit messy and not as efficient as it could be.
 
 ## Writeups
 - [Day 9](writeups/day9.md)
+- [Day 10](writeups/day10.md)
 
 ## Friends
 ![](friend.gif)
