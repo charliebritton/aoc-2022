@@ -9,8 +9,10 @@ Test data for each day to verify code works is in `data/dayNt` and `data/dayNa` 
 Code is a bit messy and not as efficient as it could be.
 
 ## Writeups
+*(I only started to do these a few days in and I've forgotten most of the ways of thinking for the first few)*
 - [Day 9](writeups/day9.md)
 - [Day 10](writeups/day10.md)
+- [Day 11](writeups/day11.md)
 
 ## Friends
 ![](friend.gif)

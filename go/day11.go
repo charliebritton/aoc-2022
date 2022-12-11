@@ -25,78 +25,7 @@ type Monkey struct {
 
 var monkeys []Monkey
 
-// func part1() {
-
-// 	f, err := os.OpenFile("../data/day11a", os.O_RDONLY, 0755)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	fileScanner := bufio.NewScanner(f)
-// 	fileScanner.Split(bufio.ScanLines)
-
-// 	parseAllMonkeys(fileScanner)
-
-// 	// Says to do 20 rounds
-// 	for roundNum := 1; roundNum <= 20; roundNum++ {
-
-// 		for j := range monkeys {
-
-// 			for i := range monkeys[j].Items {
-
-// 				monkeys[j].Items[i] = WorryLevel(monkeys[j].Operation(int(monkeys[j].Items[i])))
-// 				monkeys[j].Items[i] = monkeys[j].Items[i] / 3
-
-// 				if monkeys[j].Items[i]%WorryLevel(monkeys[j].DivisibleTest) == 0 {
-// 					monkeys[monkeys[j].DivisibleTrue].Items = append(monkeys[monkeys[j].DivisibleTrue].Items, monkeys[j].Items[i])
-// 				} else {
-// 					monkeys[monkeys[j].DivisibleFalse].Items = append(monkeys[monkeys[j].DivisibleFalse].Items, monkeys[j].Items[i])
-// 				}
-
-// 				monkeys[j].ItemInspections++
-
-// 			}
-
-// 			// Clear all items from this monkey
-// 			monkeys[j].Items = monkeys[j].Items[:0]
-
-// 		}
-
-// 		// fmt.Printf("\nAfter round %d, the monkeys are holding items with these worry levels:\n", roundNum)
-
-// 		// for num, m := range monkeys {
-
-// 		// 	// fmt.Printf("Monkey %d: %v\n", num, m.Items)
-
-// 		// }
-
-// 	}
-
-// 	fmt.Println("TOTAL INSPECTIONS:")
-
-// 	var insps []int
-
-// 	for _, m := range monkeys {
-
-// 		// fmt.Printf("Monkey %d inspected items %d times.\n", num, m.ItemInspections)
-// 		insps = append(insps, m.ItemInspections)
-
-// 	}
-
-// 	sort.IntSlice(insps).Sort()
-
-// 	insps = insps[len(insps)-2:]
-
-// 	total := 1
-// 	for _, item := range insps {
-// 		total *= item
-// 	}
-
-// 	fmt.Println(total)
-
-// }
-
-func part2() {
+func part1() {
 
 	f, err := os.OpenFile("../data/day11t", os.O_RDONLY, 0755)
 	if err != nil {
@@ -109,15 +38,16 @@ func part2() {
 	parseAllMonkeys(fileScanner)
 
 	// Says to do 20 rounds
-	for roundNum := 1; roundNum <= 10000; roundNum++ {
+	for roundNum := 1; roundNum <= 20; roundNum++ {
 
 		for j := range monkeys {
 
 			for i := range monkeys[j].Items {
-				monkeys[j].ItemInspections++
 
+				// Perform the operation
 				monkeys[j].BigOp(&monkeys[j].Items[i])
-				// monkeys[j].Items[i] = monkeys[j].Items[i] / 3
+
+				monkeys[j].Items[i].Div(&monkeys[j].Items[i], big.NewInt(3))
 
 				modRes := big.Int{}
 				mod1 := big.Int(monkeys[j].Items[i])
@@ -129,6 +59,115 @@ func part2() {
 				} else {
 					monkeys[monkeys[j].DivisibleFalse].Items = append(monkeys[monkeys[j].DivisibleFalse].Items, monkeys[j].Items[i])
 				}
+
+				monkeys[j].ItemInspections++
+
+			}
+
+			// Clear all items from this monkey
+			fmt.Printf("Operations performed on this monkey that are then cleared: %v\n", monkeys[j].Items)
+			monkeys[j].Items = monkeys[j].Items[:0]
+			fmt.Printf("After clearing: %v\n", monkeys[j].Items)
+
+		}
+
+		fmt.Printf("\nAfter round %d, the monkeys are holding items with these worry levels:\n", roundNum)
+
+		for num, m := range monkeys {
+
+			fmt.Printf("Monkey %d: %v\n", num, m.Items)
+
+		}
+
+	}
+
+	fmt.Println("TOTAL INSPECTIONS:")
+
+	var insps []int
+
+	for num, m := range monkeys {
+
+		fmt.Printf("Monkey %d inspected items %d times.\n", num, m.ItemInspections)
+		insps = append(insps, m.ItemInspections)
+
+	}
+
+	sort.IntSlice(insps).Sort()
+
+	insps = insps[len(insps)-2:]
+
+	total := 1
+	for _, item := range insps {
+		total *= item
+	}
+
+	fmt.Println(total)
+
+}
+
+func part2() {
+
+	f, err := os.OpenFile("../data/day11a", os.O_RDONLY, 0755)
+	if err != nil {
+		panic(err)
+	}
+
+	fileScanner := bufio.NewScanner(f)
+	fileScanner.Split(bufio.ScanLines)
+
+	parseAllMonkeys(fileScanner)
+
+	// Key on the silver platter, will change from big.Int if I get time later
+	var monkeyModLCMInput []int
+
+	for _, m := range monkeys {
+
+		if m.DivisibleTest != 0 {
+			monkeyModLCMInput = append(monkeyModLCMInput, m.DivisibleTest)
+		}
+		// if m.DivisibleTrue != 0 {
+		// 	monkeyModLCMInput = append(monkeyModLCMInput, m.DivisibleTrue)
+		// }
+		// if m.DivisibleFalse != 0 {
+		// 	monkeyModLCMInput = append(monkeyModLCMInput, m.DivisibleFalse)
+		// }
+
+	}
+
+	fmt.Printf("To LCM: %v\n", monkeyModLCMInput)
+
+	monkeyModLCM := findLCM(monkeyModLCMInput)
+
+	// Says to do 20 rounds
+	for roundNum := 1; roundNum <= 10000; roundNum++ {
+
+		for j := range monkeys {
+
+			for i := range monkeys[j].Items {
+
+				// Perform the standard operation
+				monkeys[j].BigOp(&monkeys[j].Items[i])
+
+				// Mod this with the LCM
+				// fmt.Printf("Reduce %d -> ", monkeys[j].Items[i].Int64())
+				monkeys[j].Items[i].Mod(&monkeys[j].Items[i], big.NewInt(int64(monkeyModLCM)))
+				// fmt.Printf("%d", monkeys[j].Items[i].Int64())
+
+				// No longer divide by 3
+
+				modRes := big.Int{}
+				mod1 := big.Int(monkeys[j].Items[i])
+				mod2 := big.NewInt(int64(monkeys[j].DivisibleTest))
+
+				modRes.Mod(&mod1, mod2)
+				if modRes.Int64() == 0 {
+					// fmt.Printf(" (%%%d==0 -> sending to monkey %d)\n", monkeys[j].DivisibleTest, monkeys[j].DivisibleTrue)
+					monkeys[monkeys[j].DivisibleTrue].Items = append(monkeys[monkeys[j].DivisibleTrue].Items, monkeys[j].Items[i])
+				} else {
+					// fmt.Printf(" (%%%d!=0 -> sending to monkey %d)\n", monkeys[j].DivisibleTest, monkeys[j].DivisibleFalse)
+					monkeys[monkeys[j].DivisibleFalse].Items = append(monkeys[monkeys[j].DivisibleFalse].Items, monkeys[j].Items[i])
+				}
+				monkeys[j].ItemInspections++
 
 			}
 
@@ -173,6 +212,40 @@ func part2() {
 	}
 
 	fmt.Println(total)
+
+}
+
+// STOLEN FROM https://siongui.github.io/2017/06/03/go-find-lcm-by-gcd/
+func GCD(a, b int) int {
+	for b != 0 {
+		t := b
+		b = a % b
+		a = t
+	}
+	return a
+}
+
+// find Least Common Multiple (LCM) via GCD
+func LCM(a, b int, integers ...int) int {
+	result := a * b / GCD(a, b)
+
+	for i := 0; i < len(integers); i++ {
+		result = LCM(result, integers[i])
+	}
+
+	return result
+}
+
+func findLCM(ints []int) int {
+
+	product := 1
+	for _, i := range ints {
+		product *= i
+	}
+	// slice to variadic
+	lcm := LCM(ints[0], ints[1], ints[2:]...)
+	fmt.Printf("LCM and product of %v: %d and %d\n", ints, lcm, product)
+	return lcm
 
 }
 
@@ -224,7 +297,7 @@ func parseMonkey(info []string) *Monkey {
 }
 
 func main() {
-	// part1()
+	part1()
 	monkeys = monkeys[:0]
 	part2()
 }
