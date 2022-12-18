@@ -88,7 +88,7 @@ func (p Puzzle) Format(f fmt.State, c rune) {
 
 	}
 
-	f.Write([]byte(fmt.Sprintf("\nCurr: %v, End: %v, Size: (%d,%d), Euclid: %.02f\n", p.Curr, p.End, len(p.HeightMap[0]), len(p.HeightMap), p.Euclidian())))
+	f.Write([]byte(fmt.Sprintf("\nStart: %v, Curr: %v, End: %v, Size: (%d,%d), Euclid: %.02f\n", p.Start, p.Curr, p.End, len(p.HeightMap[0]), len(p.HeightMap), p.Euclidian())))
 
 }
 
@@ -112,7 +112,7 @@ func (puz Puzzle) onBoard(p Pos) bool {
 func (puz Puzzle) isLegalMove(p Pos) bool {
 
 	if !puz.onBoard(p) {
-		fmt.Println("Not on board")
+		// fmt.Println("Not on board")
 		return false
 	}
 
@@ -124,7 +124,7 @@ func (puz Puzzle) isLegalMove(p Pos) bool {
 
 	// At most 1 lower
 	if puz.HeightMap[puz.Curr.y][puz.Curr.x]-puz.HeightMap[p.y][p.x] <= 1 {
-		fmt.Printf("difference is %d\n", puz.HeightMap[puz.Curr.y][puz.Curr.x]-puz.HeightMap[p.y][p.x])
+		// fmt.Printf("difference is %d\n", puz.HeightMap[puz.Curr.y][puz.Curr.x]-puz.HeightMap[p.y][p.x])
 		return true
 	}
 
@@ -157,7 +157,7 @@ func (puz Puzzle) getLegalMoves() []Pos {
 
 	}
 
-	fmt.Printf("There were %d legal moves from %v: %v", len(legalMoves), puz.Curr, legalMoves)
+	// fmt.Printf("There were %d legal moves from %v: %v", len(legalMoves), puz.Curr, legalMoves)
 	return legalMoves
 
 }
@@ -182,7 +182,7 @@ func parseInput(fileScanner *bufio.Scanner) *Puzzle {
 
 			if c == 'S' {
 				p.Start = Pos{col, currRow, nil}
-				row = append(row, 0) // Doesn't matter the height of an already visited node
+				row = append(row, 1) // Doesn't matter the height of an already visited node
 				rowVisit = append(rowVisit, false)
 				continue
 			}
@@ -335,19 +335,18 @@ func (p Puzzle) searchBFS() Pos {
 	// Whilst the queue is not empty, we look for legal moves that we can follow and do BFS on them there
 	for !q.IsEmpty() {
 
-		fmt.Println("Queue is not empty")
-		fmt.Printf("Current Queue: %v\n", q)
+		// fmt.Println("Queue is not empty")
+		// fmt.Printf("Current Queue: %v\n", q)
 
 		// Map at the start of this turn
-		fmt.Printf("Queue at start of this round:\n\n%v", p)
+		// fmt.Printf("Queue at start of this round:\n\n%v", p)
 
 		v := q.Dequeue()
 		p.Curr = v
 
-		fmt.Printf("Checking %v, queue is %v\n", v, q)
+		// fmt.Printf("Checking %v, queue is %v\n", v, q)
 
 		if v.x == p.Start.x && v.y == p.Start.y {
-			fmt.Printf("We have reached the target at %v", p.Start)
 			return v
 		}
 
@@ -357,7 +356,7 @@ func (p Puzzle) searchBFS() Pos {
 			// Not already visited
 			if !p.VisitMap[e.y][e.x] {
 
-				fmt.Printf("Adding %v to the queue\n", e)
+				// fmt.Printf("Adding %v to the queue\n", e)
 
 				// Mark as visited
 				p.VisitMap[e.y][e.x] = true
@@ -373,7 +372,7 @@ func (p Puzzle) searchBFS() Pos {
 		}
 
 	}
-	fmt.Println("Queue is empty")
+	// fmt.Println("Queue is empty")
 
 	return Pos{0, 0, nil}
 
@@ -391,27 +390,34 @@ func part1(fileName string) {
 	p := parseInput(fileScanner)
 	fmt.Println(p)
 
-	fmt.Printf("%v\n", calcMoves(p))
+	// fmt.Printf("%v\n", calcMoves(p))
 
 	bfsRes := p.searchBFS()
+	p.printPath(bfsRes)
 
-	fmt.Printf("Following trail through START -> ")
+	// fmt.Printf("Following trail through START -> ")
 	l := trailLength(&bfsRes)
-	fmt.Printf("Had to explore %d nodes\n", l)
+	fmt.Printf("Took %d moves from S to E\n\n", l)
+	// fmt.Printf("Had to explore %d nodes\n", l)
 
 }
 
 func trailLength(p *Pos) int {
 
 	if p.p == nil {
-		fmt.Printf("%v -> END ", p)
-		fmt.Println()
+		// fmt.Printf("%v -> END ", p)
+		// fmt.Println()
 		return 0
 	}
 
-	fmt.Printf("%v -> ", p)
+	// fmt.Printf("%v -> ", p)
 	return 1 + trailLength(p.p)
 
+}
+
+type CandidateDist struct {
+	Pos  Pos
+	Dist int
 }
 
 func part2(fileName string) {
@@ -426,6 +432,57 @@ func part2(fileName string) {
 	p := parseInput(fileScanner)
 	fmt.Println(p)
 
+	var candidates []Pos
+	var candidateDist []CandidateDist
+	// Find starting candidates
+	for y, row := range p.HeightMap {
+
+		for x, col := range row {
+
+			if col == 1 {
+				candidates = append(candidates, Pos{x, y, nil})
+			}
+
+		}
+
+	}
+
+	fmt.Printf("There are %d starting candidates at: %v\n", len(candidates), candidates)
+
+	for _, c := range candidates {
+
+		// Reset the visit map
+		p.VisitMap = make([][]bool, len(p.HeightMap))
+		for i := range p.VisitMap {
+			p.VisitMap[i] = make([]bool, len(p.HeightMap[0]))
+			for j := range p.VisitMap[i] {
+				p.VisitMap[i][j] = false
+			}
+		}
+
+		p.Start = c
+
+		// fmt.Printf("==========================================\n\n")
+		// fmt.Println(p)
+
+		bfsRes := p.searchBFS()
+
+		if bfsRes.p != nil {
+
+			p.printPath(bfsRes)
+
+			candidateDist = append(candidateDist, CandidateDist{c, trailLength(&bfsRes)})
+
+			fmt.Printf("For start at %v it took %d steps\n\n", c, trailLength(&bfsRes))
+		}
+	}
+
+	sort.Slice(candidateDist, func(i, j int) bool {
+		return candidateDist[i].Dist < candidateDist[j].Dist
+	})
+
+	fmt.Printf("Distances: %v\nSHORTEST: %v\n", candidateDist, candidateDist[0])
+
 	// fmt.Printf("%v\n", calcMoves(p))
 
 	// bfsRes := p.searchBFS()
@@ -436,10 +493,39 @@ func part2(fileName string) {
 
 }
 
+func (p Puzzle) printPath(n Pos) {
+
+	// Reset the visit map
+	trail := make([][]bool, len(p.HeightMap))
+	for i := range p.VisitMap {
+		trail[i] = make([]bool, len(p.HeightMap[0]))
+		for j := range trail[i] {
+			trail[i][j] = false
+		}
+	}
+
+	for n.p != nil {
+		trail[n.y][n.x] = true
+		n = *n.p
+	}
+
+	for _, row := range trail {
+		for _, col := range row {
+			if col {
+				fmt.Printf("#")
+			} else {
+				fmt.Printf(".")
+			}
+		}
+		fmt.Println()
+	}
+
+}
+
 func main() {
 
-	part1("day12t")
+	// part1("day12t")
 	// part1("day12a")
-	part2("day12t")
-	// part2("day12a")
+	// part2("day12t")
+	part2("day12a")
 }
