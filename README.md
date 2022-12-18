@@ -13,6 +13,7 @@ Code is a bit messy and not as efficient as it could be.
 - [Day 9](writeups/day9.md)
 - [Day 10](writeups/day10.md)
 - [Day 11](writeups/day11.md)
+- [Day 12](writeups/day12.md)
 
 ## Friends
 ![](friend.gif)
